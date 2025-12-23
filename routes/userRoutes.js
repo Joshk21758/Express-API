@@ -4,7 +4,7 @@ const router = express.Router();
 const User = require("../models/User");
 
 //register route
-router.post("/user/register", async (req, res) => {
+router.post("/register", async (req, res) => {
   //extract form fields
   const { username, email, password } = req.body;
 
@@ -32,7 +32,7 @@ router.post("/user/register", async (req, res) => {
 });
 
 //login route
-router.post("/user/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   //Extract form fields
   const { email, password } = req.body;
 
@@ -62,7 +62,7 @@ router.post("/user/login", async (req, res) => {
 });
 
 //Logout route
-router.post("/user/logout", async (req, res) => {
+router.post("/logout", async (req, res) => {
   //destroy the session data in DB
   req.session.destroy((err) => {
     if (err) {
