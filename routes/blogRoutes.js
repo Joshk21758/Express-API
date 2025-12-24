@@ -4,6 +4,7 @@ const router = express.Router();
 
 //fetch posts route
 router.get("/", async (req, res) => {
+  //fetch the posts
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
     res.status(100).json(posts);
@@ -13,7 +14,7 @@ router.get("/", async (req, res) => {
 });
 
 //create post route
-router.post("/post/create", async (req, res) => {
+router.post("/create", async (req, res) => {
   //extract form fields
   const { title, content } = req.body;
   //create new Post instance
@@ -31,7 +32,7 @@ router.post("/post/create", async (req, res) => {
 });
 
 //fetch single post route
-router.get("/post/show/:id", async (req, res) => {
+router.get("/show/:id", async (req, res) => {
   //find post by id
   try {
     const post = await Post.findById(req.params.id);
@@ -45,7 +46,7 @@ router.get("/post/show/:id", async (req, res) => {
 });
 
 //Update the post route
-router.put("/post/edit/:id", async (req, res) => {
+router.put("/edit/:id", async (req, res) => {
   //find post by id and update
   try {
     const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
@@ -62,7 +63,7 @@ router.put("/post/edit/:id", async (req, res) => {
 });
 
 //Delete post route
-router.delete("/post/show/:id", async (req, res) => {
+router.delete("/show/:id", async (req, res) => {
   //find post to delete
   try {
     const post = await Post.findByIdAndDelete(req.params.id);
