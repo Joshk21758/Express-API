@@ -1,7 +1,30 @@
 //imports
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const router = express.Router();
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  // Authorization header format: "Bearer <token>"
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Access Denied" });
+  }
+
+  try {
+    //verify token using secret
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    //attach user data to request
+    req.user = verified;
+    //move to next function
+    next();
+  } catch (err) {
+    res.status(400).json({ message: "Invalid token" });
+  }
+};
 
 //register route
 router.post("/register", async (req, res) => {
@@ -14,18 +37,17 @@ router.post("/register", async (req, res) => {
     if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
-    //save user to DB
-    user = await User.create({
+    //hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = new User({
       username,
       email,
-      password,
+      password: hashedPassword,
     });
 
-    //log user in by setting session
-    req.session.userId = user._id;
-    return res.status(200).json({
-      message: "Sucessfully registered user",
-    });
+    //save user to DB
+    await user.save();
+    res.status(200).json({ message: "Registered successfully.." });
   } catch (err) {
     return res.status(400).json({ message: "Failed to register user" });
   }
@@ -37,7 +59,7 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    //find user by email
+    //check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "You don't have an Account" });
@@ -46,33 +68,28 @@ router.post("/login", async (req, res) => {
     //compare passwords with hashed passwords
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Passwords do not match" });
+      return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    //Login user by setting session
-    req.session.userId = user._id;
-    res.json({
-      id: user._id,
-      email: user.email,
-      message: "Successfully Logged in",
+    //Create json web token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
     });
+    res.status(200).json({ token, user: { id: user._id, email: user.email } });
   } catch (err) {
     res.status(400).json({ message: "Failed to Login user" });
   }
 });
 
 //Logout route
-router.post("/logout", async (req, res) => {
-  //destroy the session data in DB
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(400).json({ message: "Failed to logout" });
-    }
-
-    //logout user by clearing session cookie
-    res.clearCookie("connect.sid");
-    res.status(200).json({ message: "Logged out successfully" });
-  });
+router.post("/logout", verifyToken, async (req, res) => {
+  try {
+    //Clear the cookie
+    res.clearCookie("token");
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (err) {
+    return res.status(400).json({ message: "Error logging out.." });
+  }
 });
 
 module.exports = router;
